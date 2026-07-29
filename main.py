@@ -5,7 +5,7 @@ import urllib.parse
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import google.generativeai as genai
+from google import genai
 
 # ==========================================
 # 1. 환경변수 및 설정
@@ -17,7 +17,8 @@ SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD")
 RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL")
 
-genai.configure(api_key=GEMINI_API_KEY)
+# 최신 google-genai 클라이언트 초기화
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ==========================================
 # 2. 네이버 뉴스 검색 (국내: HMR, 밀키트, 가공육)
@@ -98,8 +99,11 @@ def generate_report(kr_news, en_news):
 ## 📈 4. HMR & 가공육 제품/마케팅 전략 제언
 - 최근 소비자 니즈에 맞춘 제품 개발 및 판매 전략 2가지 제안
 """
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    response = model.generate_content(prompt)
+    # 최신 gemini-2.5-flash 모델 호출
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt
+    )
     return response.text
 
 # ==========================================
