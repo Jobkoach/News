@@ -1,4 +1,3 @@
-Plaintext
 requests
 feedparser
 google-generativeai
