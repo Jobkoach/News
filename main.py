@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 import feedparser
 import urllib.parse
@@ -99,12 +100,23 @@ def generate_report(kr_news, en_news):
 ## 📈 4. HMR & 가공육 제품/마케팅 전략 제언
 - 최근 소비자 니즈에 맞춘 제품 개발 및 판매 전략 2가지 제안
 """
-    # 최신 gemini-2.5-flash 모델 호출
-    response = client.models.generate_content(
-        model='gemini-2.0-flash',
-        contents=prompt
-    )
-    return response.text
+    # 429 오류 대비 시도할 모델 순서
+    target_models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash']
+    
+    for model_name in target_models:
+        try:
+            print(f"[{model_name}] 모델로 리포트 생성을 시도합니다...")
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt
+            )
+            return response.text
+        except Exception as e:
+            print(f"[{model_name}] 실패: {e}")
+            print("30초 대기 후 다음 모델로 재시도합니다...")
+            time.sleep(30)
+            
+    raise Exception("모든 Gemini 모델의 Quota 한도에 도달했습니다.")
 
 # ==========================================
 # 5. 이메일 전송 함수
