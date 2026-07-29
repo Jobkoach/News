@@ -101,7 +101,7 @@ def generate_report(kr_news, en_news):
 """
     # 최신 gemini-2.5-flash 모델 호출
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-1.5-flash',
         contents=prompt
     )
     return response.text
