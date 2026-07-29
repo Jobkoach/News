@@ -21,9 +21,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Check directory files (디버깅용)
-        run: ls -la
-
       - name: Run script
         env:
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
@@ -32,4 +29,10 @@ jobs:
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
-        run: python main.py
+        # News 폴더 안에 있는 main.py를 실행하도록 경로 지정
+        run: |
+          if [ -f "main.py" ]; then
+            python main.py
+          elif [ -f "News/main.py" ]; then
+            python News/main.py
+          fi
