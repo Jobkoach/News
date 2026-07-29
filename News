@@ -1,11 +1,12 @@
 import os
+import time
 import requests
 import feedparser
 import urllib.parse
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import google.generativeai as genai
+from google import genai
 
 # ==========================================
 # 1. 환경변수 및 설정
@@ -14,10 +15,11 @@ NAVER_CLIENT_ID = os.environ.get("NAVER_CLIENT_ID")
 NAVER_CLIENT_SECRET = os.environ.get("NAVER_CLIENT_SECRET")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
-SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD") # Gmail 16자리 앱 비밀번호
+SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD")
 RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL")
 
-genai.configure(api_key=GEMINI_API_KEY)
+# 최신 google-genai 클라이언트 초기화
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ==========================================
 # 2. 네이버 뉴스 검색 (국내: HMR, 밀키트, 가공육)
@@ -40,7 +42,7 @@ def fetch_naver_news(keyword, display=7):
     return []
 
 # ==========================================
-# 3. Google News RSS 검색 (해외: Ready Meals, Processed Meat, Prepared Foods)
+# 3. Google News RSS 검색 (해외: Ready Meals, Processed Meat)
 # ==========================================
 def fetch_google_news(keyword, num_items=7):
     encoded_query = urllib.parse.quote(keyword)
@@ -56,7 +58,7 @@ def fetch_google_news(keyword, num_items=7):
     return news_list
 
 # ==========================================
-# 4. Gemini AI 분석 및 리포트 작성 (HMR & 가공육 특화 프롬프트)
+# 4. Gemini AI 분석 및 리포트 작성
 # ==========================================
 def generate_report(kr_news, en_news):
     prompt = f"""
@@ -96,11 +98,25 @@ def generate_report(kr_news, en_news):
   - 💡 **시사점:** 글로벌 트렌드의 국내 적용 가능성 및 육가공/HMR 기술 동향
 
 ## 📈 4. HMR & 가공육 제품/마케팅 전략 제언
-- 최근 소비자 니즈(예: 고단백, 저염, 프레시 HMR, 프리미엄 간편식 등)에 맞춘 제품 개발 및 판매 전략 2가지 제안
+- 최근 소비자 니즈에 맞춘 제품 개발 및 판매 전략 2가지 제안
 """
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    response = model.generate_content(prompt)
-    return response.text
+    # 429 Rate Limit 대비 최대 3회 재시도 (30초 대기)
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"[gemini-2.0-flash] 리포트 생성 시도 ({attempt}/{max_retries})...")
+            response = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=prompt
+            )
+            return response.text
+        except Exception as e:
+            print(f"시도 {attempt} 실패: {e}")
+            if attempt < max_retries:
+                print("30초 대기 후 재시도합니다...")
+                time.sleep(30)
+            
+    raise Exception("Gemini API 호출 실패 (새 API 키 발급 및 쿼터 확인이 필요합니다).")
 
 # ==========================================
 # 5. 이메일 전송 함수
@@ -118,10 +134,9 @@ def send_email(content):
         server.send_message(msg)
 
 # ==========================================
-# 6. 메인 실행부 (HMR & 가공육 전용 검색 키워드)
+# 6. 메인 실행부
 # ==========================================
 if __name__ == "__main__":
-    # HMR / 밀키트 / 가공육 / 육가공 특화 쿼리
     kr_query = "HMR OR 밀키트 OR 간편식 OR 가공육 OR 육가공"
     en_query = '"ready meals" OR "prepared foods" OR "processed meat" OR "delicatessen"'
     
