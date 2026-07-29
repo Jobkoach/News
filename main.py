@@ -100,23 +100,23 @@ def generate_report(kr_news, en_news):
 ## 📈 4. HMR & 가공육 제품/마케팅 전략 제언
 - 최근 소비자 니즈에 맞춘 제품 개발 및 판매 전략 2가지 제안
 """
-    # 429 오류 대비 시도할 모델 순서
-    target_models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash']
-    
-    for model_name in target_models:
+    # 429 Rate Limit 대비 최대 3회 재시도 (30초 대기)
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
         try:
-            print(f"[{model_name}] 모델로 리포트 생성을 시도합니다...")
+            print(f"[gemini-2.0-flash] 리포트 생성 시도 ({attempt}/{max_retries})...")
             response = client.models.generate_content(
-                model=model_name,
+                model='gemini-2.0-flash',
                 contents=prompt
             )
             return response.text
         except Exception as e:
-            print(f"[{model_name}] 실패: {e}")
-            print("30초 대기 후 다음 모델로 재시도합니다...")
-            time.sleep(30)
+            print(f"시도 {attempt} 실패: {e}")
+            if attempt < max_retries:
+                print("30초 대기 후 재시도합니다...")
+                time.sleep(30)
             
-    raise Exception("모든 Gemini 모델의 Quota 한도에 도달했습니다.")
+    raise Exception("Gemini API 호출 실패 (새 API 키 발급 및 쿼터 확인이 필요합니다).")
 
 # ==========================================
 # 5. 이메일 전송 함수
