@@ -6,7 +6,7 @@ import urllib.parse
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import google.generativeai as genai  # 안정적인 패키지로 변경
+from google import genai  # 최신 google-genai 사용
 
 # ==========================================
 # 1. 환경변수 및 설정
@@ -18,11 +18,11 @@ SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD")
 RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL")
 
-# Gemini SDK 설정 (AQ... 키 및 AIza... 키 모두 호환 가능)
-genai.configure(api_key=GEMINI_API_KEY)
+# 최신 google-genai 클라이언트 초기화 (AQ... 키 정식 지원)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ==========================================
-# 2. 네이버 뉴스 검색
+# 2. 네이버 뉴스 검색 (국내: HMR, 밀키트, 가공육)
 # ==========================================
 def fetch_naver_news(keyword, display=7):
     enc_text = urllib.parse.quote(keyword)
@@ -42,7 +42,7 @@ def fetch_naver_news(keyword, display=7):
     return []
 
 # ==========================================
-# 3. Google News RSS 검색
+# 3. Google News RSS 검색 (해외: Ready Meals, Processed Meat)
 # ==========================================
 def fetch_google_news(keyword, num_items=7):
     encoded_query = urllib.parse.quote(keyword)
@@ -100,22 +100,22 @@ def generate_report(kr_news, en_news):
 ## 📈 4. HMR & 가공육 제품/마케팅 전략 제언
 - 최근 소비자 니즈에 맞춘 제품 개발 및 판매 전략 2가지 제안
 """
-    # 호환성 높은 GenerativeModel 생성
-    model = genai.GenerativeModel('gemini-2.0-flash')
-    
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         try:
             print(f"[gemini-2.0-flash] 리포트 생성 시도 ({attempt}/{max_retries})...")
-            response = model.generate_content(prompt)
+            response = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=prompt
+            )
             return response.text
         except Exception as e:
-            print(f"시도 {attempt} 실패 상세 원인: {e}")
+            print(f"시도 {attempt} 실패: {e}")
             if attempt < max_retries:
                 print("30초 대기 후 재시도합니다...")
                 time.sleep(30)
             
-    raise Exception("Gemini API 호출에 최종 실패했습니다. 위의 상세 원인 메시지를 확인해주세요.")
+    raise Exception("Gemini API 호출에 실패했습니다.")
 
 # ==========================================
 # 5. 이메일 전송 함수
