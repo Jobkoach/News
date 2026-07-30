@@ -25,37 +25,44 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 # 2. 네이버 뉴스 검색 (국내: HMR, 밀키트, 가공육)
 # ==========================================
 def fetch_naver_news(keyword, display=7):
-    enc_text = urllib.parse.quote(keyword)
-    url = f"https://openapi.naver.com/v1/search/news.json?query={enc_text}&display={display}&sort=sim"
-    headers = {
-        "X-Naver-Client-Id": NAVER_CLIENT_ID,
-        "X-Naver-Client-Secret": NAVER_CLIENT_SECRET
-    }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        items = response.json().get('items', [])
-        return [{
-            "title": item['title'].replace('<b>','').replace('</b>','').replace('&quot;', '"'),
-            "link": item['link'],
-            "desc": item['description'].replace('<b>','').replace('</b>','').replace('&quot;', '"')
-        } for item in items]
+    try:
+        enc_text = urllib.parse.quote(keyword)
+        url = f"https://openapi.naver.com/v1/search/news.json?query={enc_text}&display={display}&sort=sim"
+        headers = {
+            "X-Naver-Client-Id": NAVER_CLIENT_ID,
+            "X-Naver-Client-Secret": NAVER_CLIENT_SECRET
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            items = response.json().get('items', [])
+            return [{
+                "title": item['title'].replace('<b>','').replace('</b>','').replace('&quot;', '"'),
+                "link": item['link'],
+                "desc": item['description'].replace('<b>','').replace('</b>','').replace('&quot;', '"')
+            } for item in items]
+    except Exception as e:
+        print(f"네이버 뉴스 수집 중 오류 발생: {e}")
     return []
 
 # ==========================================
 # 3. Google News RSS 검색 (해외: Ready Meals, Processed Meat)
 # ==========================================
 def fetch_google_news(keyword, num_items=7):
-    encoded_query = urllib.parse.quote(keyword)
-    rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en-US&gl=US&ceid=US:en"
-    feed = feedparser.parse(rss_url)
-    news_list = []
-    for entry in feed.entries[:num_items]:
-        news_list.append({
-            "title": entry.title,
-            "link": entry.link,
-            "desc": entry.get('summary', '')
-        })
-    return news_list
+    try:
+        encoded_query = urllib.parse.quote(keyword)
+        rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en-US&gl=US&ceid=US:en"
+        feed = feedparser.parse(rss_url)
+        news_list = []
+        for entry in feed.entries[:num_items]:
+            news_list.append({
+                "title": entry.title,
+                "link": entry.link,
+                "desc": entry.get('summary', '')
+            })
+        return news_list
+    except Exception as e:
+        print(f"구글 뉴스 수집 중 오류 발생: {e}")
+    return []
 
 # ==========================================
 # 4. Gemini AI 분석 및 리포트 작성
@@ -100,15 +107,15 @@ def generate_report(kr_news, en_news):
 ## 📈 4. HMR & 가공육 제품/마케팅 전략 제언
 - 최근 소비자 니즈에 맞춘 제품 개발 및 판매 전략 2가지 제안
 """
+    # 무료 플랜에서 limit: 0 에러 없이 정상 작동하는 모델 고정
+    SELECTED_MODEL = 'gemini-1.5-flash'
     max_retries = 3
-    # 429 에러 우회를 위해 가장 안정적인 무료 라이트 모델 사용
-    target_model = 'gemini-2.0-flash-lite'
-    
+
     for attempt in range(1, max_retries + 1):
         try:
-            print(f"[{target_model}] 리포트 생성 시도 ({attempt}/{max_retries})...")
+            print(f"[{SELECTED_MODEL}] 리포트 생성 시도 ({attempt}/{max_retries})...")
             response = client.models.generate_content(
-                model=target_model,
+                model=SELECTED_MODEL,
                 contents=prompt
             )
             return response.text
@@ -118,7 +125,7 @@ def generate_report(kr_news, en_news):
                 print("30초 대기 후 재시도합니다...")
                 time.sleep(30)
             
-    raise Exception("Gemini API 호출에 최종 실패했습니다.")
+    raise Exception(f"Gemini API ({SELECTED_MODEL}) 호출에 최종 실패했습니다.")
 
 # ==========================================
 # 5. 이메일 전송 함수
