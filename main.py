@@ -105,7 +105,7 @@ def generate_report(kr_news, en_news):
         try:
             print(f"[gemini-2.0-flash] 리포트 생성 시도 ({attempt}/{max_retries})...")
             response = client.models.generate_content(
-                model='gemini-2.0-flash',
+                model='gemini-1.5-flash',
                 contents=prompt
             )
             return response.text
