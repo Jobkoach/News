@@ -6,7 +6,7 @@ import urllib.parse
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from google import genai  # 최신 google-genai 사용
+from google import genai
 
 # ==========================================
 # 1. 환경변수 및 설정
@@ -18,7 +18,7 @@ SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD")
 RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL")
 
-# 최신 google-genai 클라이언트 초기화 (AQ... 키 정식 지원)
+# 최신 google-genai 클라이언트 초기화
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ==========================================
@@ -101,11 +101,14 @@ def generate_report(kr_news, en_news):
 - 최근 소비자 니즈에 맞춘 제품 개발 및 판매 전략 2가지 제안
 """
     max_retries = 3
+    # 429 에러 우회를 위해 가장 안정적인 무료 라이트 모델 사용
+    target_model = 'gemini-2.0-flash-lite'
+    
     for attempt in range(1, max_retries + 1):
         try:
-            print(f"[gemini-1.5-flash] 리포트 생성 시도 ({attempt}/{max_retries})...")
+            print(f"[{target_model}] 리포트 생성 시도 ({attempt}/{max_retries})...")
             response = client.models.generate_content(
-                model='gemini-1.5-flash',
+                model=target_model,
                 contents=prompt
             )
             return response.text
@@ -115,7 +118,7 @@ def generate_report(kr_news, en_news):
                 print("30초 대기 후 재시도합니다...")
                 time.sleep(30)
             
-    raise Exception("Gemini API 호출에 실패했습니다.")
+    raise Exception("Gemini API 호출에 최종 실패했습니다.")
 
 # ==========================================
 # 5. 이메일 전송 함수
