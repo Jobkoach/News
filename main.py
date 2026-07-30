@@ -103,7 +103,7 @@ def generate_report(kr_news, en_news):
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         try:
-            print(f"[gemini-2.0-flash] 리포트 생성 시도 ({attempt}/{max_retries})...")
+            print(f"[gemini-1.5-flash] 리포트 생성 시도 ({attempt}/{max_retries})...")
             response = client.models.generate_content(
                 model='gemini-1.5-flash',
                 contents=prompt
